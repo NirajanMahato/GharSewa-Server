@@ -9,6 +9,7 @@ const userRoutes = require("./router/userRoutes");
 const technicianRoutes = require("./router/technicianRoutes");
 const bookingRoutes = require("./router/bookingRoutes");
 const messageRoutes = require("./router/messageRoutes");
+const adminRoutes = require("./router/adminRoutes");
 const socketHandler = require("./socket/socket");
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/technician", technicianRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Modular Socket Handler
 socketHandler(io);
