@@ -13,13 +13,14 @@ const registerTechnician = async (req, res) => {
       password,
       companyName,
       address,
-      licenseFile, // filename or file URL (depends on multer setup)
       preferredDate,
       preferredHour,
       preferredMinutes,
       termsAgreed,
       newsletter,
     } = req.body;
+
+    const licenseFile = req.file?.filename || "";
 
     // Check for existing user
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });

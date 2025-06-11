@@ -157,7 +157,6 @@ const getCurrentUser = async (req, res) => {
 module.exports = {
   getAllUsers,
   registerCustomer,
-  registerTechnician,
   login,
   saveUserLocation,
   getCurrentUser,
