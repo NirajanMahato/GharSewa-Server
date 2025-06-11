@@ -44,7 +44,7 @@ const registerTechnician = async (req, res) => {
       role: "technician",
       companyName,
       address,
-      licenseFile, // to be handled via multer later
+      licenseFile, // will save just the file name
       verified: false,
       termsAgreed: termsAgreed || false,
       newsletter: newsletter || false,

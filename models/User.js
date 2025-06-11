@@ -35,7 +35,11 @@ const userSchema = mongoose.Schema(
     // Technician-specific fields
     companyName: { type: String },
     address: { type: String }, // companyAddress
-    skills: { type: [String], default: [] },
+    skills: {
+      type: [String],
+      enum: ["plumbing", "electricity", "lockwork", "heating"],
+      default: [],
+    },
     experience: { type: Number },
     verified: { type: Boolean, default: false },
     licenseFile: { type: String }, // license file upload (path or URL)

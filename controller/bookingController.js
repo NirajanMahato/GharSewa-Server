@@ -11,25 +11,31 @@ const createBooking = async (req, res) => {
       address,
       preferredDate,
       preferredTime,
+      latitude,
+      longitude, // from frontend if available
     } = req.body;
 
-    // Get customer ID from token
     const customerId = req.user.id;
 
-    // Optional: Validate fields
-    if (
-      !serviceType ||
-      !problemType ||
-      !estimatedCost ||
-      !address ||
-      !preferredDate ||
-      !preferredTime
-    ) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
+    // Step 1: Find nearest verified technician matching serviceType
+    const nearbyTechnician = await User.findOne({
+      role: "technician",
+      verified: true,
+      skills: serviceType, // checks if serviceType is in skills[]
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [longitude, latitude],
+          },
+          $maxDistance: 10000, // 10 km range, adjust as needed
+        },
+      },
+    });
 
     const booking = new Booking({
       customer: customerId,
+      technician: nearbyTechnician?._id || null,
       serviceType,
       problemType,
       customProblem: problemType === "Other" ? customProblem : null,
@@ -43,7 +49,9 @@ const createBooking = async (req, res) => {
     const savedBooking = await booking.save();
 
     res.status(201).json({
-      message: "Booking request submitted successfully",
+      message: nearbyTechnician
+        ? "Booking submitted and assigned to a technician"
+        : "Booking submitted (technician will be assigned soon)",
       data: savedBooking,
     });
   } catch (error) {
