@@ -73,6 +73,17 @@ const registerTechnician = async (req, res) => {
   }
 };
 
+const getAllTechnicians = async (req, res) => {
+  try {
+    const technicians = await User.find({ role: "technician" }).select(
+      "-password"
+    );
+    res.status(200).json(technicians);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch all technicians", error });
+  }
+};
+
 const verifyTechnician = async (req, res) => {
   try {
     const technicianId = req.params.technicianId;
@@ -112,6 +123,7 @@ const getVerifiedTechnicians = async (req, res) => {
 
 module.exports = {
   registerTechnician,
+  getAllTechnicians,
   verifyTechnician,
   getVerifiedTechnicians,
 };

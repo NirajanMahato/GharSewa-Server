@@ -4,6 +4,7 @@ const {
   registerTechnician,
   verifyTechnician,
   getVerifiedTechnicians,
+  getAllTechnicians,
 } = require("../controller/technicianController");
 const uploadLicense = require("../middleware/multer");
 
@@ -15,6 +16,7 @@ router.post(
   uploadLicense.single("licenseFile"),
   registerTechnician
 );
+router.get("/all", verifyToken, adminOnly, getAllTechnicians);
 router.put("/verify/:technicianId", verifyToken, adminOnly, verifyTechnician);
 router.get("/", getVerifiedTechnicians);
 

@@ -8,12 +8,6 @@ const {
   saveUserLocation,
   getCurrentUser,
 } = require("../controller/userController");
-const {
-  registerTechnician,
-  verifyTechnician,
-  getVerifiedTechnicians,
-} = require("../controller/technicianController");
-const adminOnly = require("../middleware/adminOnly");
 const verifyToken = require("../middleware/authMiddleware");
 
 router.post("/register/customer", registerCustomer);

@@ -96,7 +96,7 @@ const login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "3d" }
       );
-
+      
       return res.status(200).json({
         message: "Login successful",
         user: {
@@ -118,7 +118,9 @@ const saveUserLocation = async (req, res) => {
     const { userId, latitude, longitude } = req.body;
 
     if (!userId || !latitude || !longitude) {
-      return res.status(400).json({ message: "User ID and coordinates are required." });
+      return res
+        .status(400)
+        .json({ message: "User ID and coordinates are required." });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -152,7 +154,6 @@ const getCurrentUser = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user", error });
   }
 };
-
 
 module.exports = {
   getAllUsers,
