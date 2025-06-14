@@ -9,9 +9,9 @@ const {
 const verifyToken = require("../middleware/authMiddleware");
 const technicianOnly = require("../middleware/technicianOnly");
 
-router.post("/", verifyToken, createBooking); // Customer creates a booking
-router.get("/customer", verifyToken, getCustomerBookings); // Fetch bookings for logged-in customer
-router.get("/technician", verifyToken, getTechnicianBookings); // Technician gets assigned bookings
-router.put("/:id/status", verifyToken, technicianOnly ,updateBookingStatus); // Technician updates booking status
+router.post("/", verifyToken, createBooking);
+router.get("/customer", verifyToken, getCustomerBookings);
+router.get("/technician", verifyToken, getTechnicianBookings);
+router.put("/:id/status", verifyToken, technicianOnly ,updateBookingStatus);
 
 module.exports = router;

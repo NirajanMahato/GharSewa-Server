@@ -12,6 +12,7 @@ const registerTechnician = async (req, res) => {
       phone,
       password,
       companyName,
+      skills,
       address,
       preferredDate,
       preferredHour,
@@ -36,6 +37,8 @@ const registerTechnician = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const parsedSkills =
+      typeof skills === "string" ? JSON.parse(skills) : skills;
 
     const technicianData = {
       fullName,
@@ -44,6 +47,7 @@ const registerTechnician = async (req, res) => {
       password: hashedPassword,
       role: "technician",
       companyName,
+      skills: parsedSkills, // store array of skills
       address,
       licenseFile, // will save just the file name
       verified: false,

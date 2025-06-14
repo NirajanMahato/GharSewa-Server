@@ -10,7 +10,6 @@ const {
   deleteUser,
 } = require("../controller/adminController");
 
-// Admin-only protected routes
 router.get("/users", verifyToken, adminOnly, getAllUsers);
 router.get("/unverified", verifyToken, adminOnly, getUnverifiedTechnicians);
 router.get("/bookings", verifyToken, adminOnly, getAllBookings);

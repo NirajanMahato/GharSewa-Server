@@ -7,7 +7,9 @@ const sendMessage = async (req, res) => {
     const senderId = req.user.id;
 
     if (!receiverId || !message) {
-      return res.status(400).json({ message: "Receiver and message are required" });
+      return res
+        .status(400)
+        .json({ message: "Receiver and message are required" });
     }
 
     const newMessage = new Message({
