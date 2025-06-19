@@ -45,6 +45,8 @@ const bookingSchema = mongoose.Schema(
       enum: ["pending", "accepted", "rejected", "completed"],
       default: "pending",
     },
+    rejectedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    notifiedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,
