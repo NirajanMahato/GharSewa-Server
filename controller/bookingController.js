@@ -30,7 +30,7 @@ const searchTechnician = async (req, res) => {
       },
     };
 
-    const technicians = await User.find(query);
+    const technicians = await User.find(query).limit(5);
 
     if (!technicians.length) {
       return res.json({
@@ -39,23 +39,45 @@ const searchTechnician = async (req, res) => {
       });
     }
 
-    const selected =
-      technicians[Math.floor(Math.random() * technicians.length)];
-
-    const newBooking = new Booking({
-      customer: req.user.id,
-      technician: selected._id,
-      serviceType: type,
-      subProblem: sub,
-      location,
-      searchType,
-      status: "pending",
-      createdAt: new Date(),
-    });
-
-    await newBooking.save();
-
-    return res.json({ success: true, bookingId: newBooking._id });
+    if (searchType === "rapid") {
+      // Rapid search: store up to 5 technicians, do not assign yet
+      const notifiedTechnicians = technicians.map((t) => t._id);
+      const newBooking = new Booking({
+        customer: req.user.id,
+        serviceType: type,
+        subProblem: sub,
+        location,
+        searchType,
+        status: "pending",
+        notifiedTechnicians,
+        currentTechnicianIndex: 0,
+        rejectedBy: [],
+        createdAt: new Date(),
+      });
+      await newBooking.save();
+      // Socket.io notification will be handled in the socket handler
+      return res.json({
+        success: true,
+        bookingId: newBooking._id,
+        notifiedTechnicians,
+      });
+    } else {
+      // Normal search: assign one technician randomly
+      const selected =
+        technicians[Math.floor(Math.random() * technicians.length)];
+      const newBooking = new Booking({
+        customer: req.user.id,
+        technician: selected._id,
+        serviceType: type,
+        subProblem: sub,
+        location,
+        searchType,
+        status: "pending",
+        createdAt: new Date(),
+      });
+      await newBooking.save();
+      return res.json({ success: true, bookingId: newBooking._id });
+    }
   } catch (err) {
     console.error("Search error:", err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -230,6 +252,58 @@ const updateBookingStatus = async (req, res) => {
   }
 };
 
+// Get booking by ID (with customer and technician details)
+const getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id)
+      .populate("customer", "fullName email phone address")
+      .populate("technician", "fullName email phone address");
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    res.status(200).json(booking);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+// Get technician income and payouts
+const getTechnicianIncome = async (req, res) => {
+  try {
+    const technicianId = req.user.id;
+    // Find all completed bookings for this technician
+    const completedBookings = await Booking.find({
+      technician: technicianId,
+      status: "completed",
+    });
+    // Total earnings
+    const totalEarnings = completedBookings.reduce(
+      (sum, b) => sum + (b.estimatedCost || 0),
+      0
+    );
+    // Monthly earnings (current month)
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const monthlyEarnings = completedBookings
+      .filter((b) => {
+        const d = new Date(b.updatedAt || b.createdAt);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, b) => sum + (b.estimatedCost || 0), 0);
+    // Payouts (list of completed bookings)
+    const payouts = completedBookings.map((b) => ({
+      id: b._id,
+      date: b.updatedAt || b.createdAt,
+      amount: b.estimatedCost || 0,
+    }));
+    res.status(200).json({ totalEarnings, monthlyEarnings, payouts });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
 module.exports = {
   searchTechnician,
   createBooking,
@@ -237,4 +311,6 @@ module.exports = {
   getTechnicianBookings,
   updateBookingStatus,
   notifyNextTechnician,
+  getBookingById,
+  getTechnicianIncome,
 };

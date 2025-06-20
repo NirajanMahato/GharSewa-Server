@@ -47,6 +47,10 @@ const bookingSchema = mongoose.Schema(
     },
     rejectedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     notifiedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    notifiedTechnicians: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ], // up to 5
+    currentTechnicianIndex: { type: Number, default: 0 },
   },
   {
     timestamps: true,
