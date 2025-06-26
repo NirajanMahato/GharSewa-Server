@@ -51,6 +51,11 @@ const bookingSchema = mongoose.Schema(
       { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     ], // up to 5
     currentTechnicianIndex: { type: Number, default: 0 },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid"],
+      default: "pending",
+    },
   },
   {
     timestamps: true,

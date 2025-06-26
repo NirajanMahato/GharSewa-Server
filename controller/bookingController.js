@@ -25,7 +25,6 @@ const searchTechnician = async (req, res) => {
             type: "Point",
             coordinates, // [lng, lat]
           },
-          $maxDistance: searchType === "rapid" ? 5000 : 15000,
         },
       },
     };
@@ -101,7 +100,6 @@ const notifyNextTechnician = async (req, res) => {
             type: "Point",
             coordinates: booking.location.coordinates,
           },
-          $maxDistance: 10000, // 10 km
         },
       },
       _id: { $nin: booking.rejectedBy || [] },
@@ -240,6 +238,9 @@ const updateBookingStatus = async (req, res) => {
     }
 
     booking.status = status;
+    if (status === "completed") {
+      booking.paymentStatus = "paid";
+    }
     await booking.save();
 
     res.status(200).json({
