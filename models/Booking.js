@@ -10,7 +10,7 @@ const bookingSchema = mongoose.Schema(
     technician: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null, // can be null initially
+      default: null,
     },
     serviceType: {
       type: String,
@@ -22,7 +22,7 @@ const bookingSchema = mongoose.Schema(
       required: true,
     },
     customProblem: {
-      type: String, // only if problemType is "Other"
+      type: String,
     },
     estimatedCost: {
       type: Number,
