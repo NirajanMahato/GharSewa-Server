@@ -37,5 +37,5 @@ app.use("/api/admin", adminRoutes);
 socketHandler(io);
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on PORT ${PORT}`);
 });

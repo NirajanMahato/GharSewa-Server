@@ -14,7 +14,7 @@ const serviceSchema = mongoose.Schema(
     },
     serviceType: {
       type: String,
-      required: true, // e.g., Plumbing, Electrician, Carpentry
+      required: true,
     },
     description: {
       type: String,
