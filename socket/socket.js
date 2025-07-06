@@ -1,6 +1,15 @@
 const Booking = require("../models/Booking");
 const Message = require("../models/Message");
 
+// Function to send notification to technician
+const notifyTechnician = (io, technicianId, bookingData) => {
+  io.to(technicianId.toString()).emit("new_booking", {
+    type: "new_booking",
+    booking: bookingData,
+    message: "You have a new booking request!",
+  });
+};
+
 module.exports = (io) => {
   io.on("connection", (socket) => {
     console.log("Socket connected:", socket.id);

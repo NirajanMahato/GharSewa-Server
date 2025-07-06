@@ -43,11 +43,7 @@ const userSchema = mongoose.Schema(
     experience: { type: Number },
     verified: { type: Boolean, default: false },
     licenseFile: { type: String }, // license file upload (path or URL)
-    preferredContactTime: {
-      date: { type: String },
-      hour: { type: String },
-      minutes: { type: String },
-    },
+
     termsAgreed: { type: Boolean, default: false },
     newsletter: { type: Boolean, default: false },
 

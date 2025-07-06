@@ -15,7 +15,6 @@ const bookingSchema = mongoose.Schema(
     serviceType: {
       type: String,
       required: true,
-      enum: ["plumbing", "electricity", "lockwork", "heating"],
     },
     problemType: {
       type: String,
@@ -26,7 +25,7 @@ const bookingSchema = mongoose.Schema(
     },
     estimatedCost: {
       type: Number,
-      required: true,
+      default: 0,
     },
     address: {
       type: String,

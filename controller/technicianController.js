@@ -1,81 +1,4 @@
 const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
-
-// Register Technician
-const registerTechnician = async (req, res) => {
-  try {
-    const {
-      fullName,
-      email,
-      phone,
-      password,
-      companyName,
-      skills,
-      address,
-      preferredDate,
-      preferredHour,
-      preferredMinutes,
-      termsAgreed,
-      newsletter,
-    } = req.body;
-
-    const licenseFile = req.file?.filename || "";
-
-    // Check for existing user
-    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email or phone already exists" });
-    }
-
-    // Validate password
-    if (!password || password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const parsedSkills =
-      typeof skills === "string" ? JSON.parse(skills) : skills;
-
-    const technicianData = {
-      fullName,
-      email,
-      phone,
-      password: hashedPassword,
-      role: "technician",
-      companyName,
-      skills: parsedSkills, // store array of skills
-      address,
-      licenseFile, // will save just the file name
-      verified: false,
-      termsAgreed: termsAgreed || false,
-      newsletter: newsletter || false,
-      preferredContactTime: {
-        date: preferredDate,
-        hour: preferredHour,
-        minutes: preferredMinutes,
-      },
-      location: {
-        type: "Point",
-        coordinates: [0, 0], // Will update later
-      },
-    };
-
-    const newTechnician = new User(technicianData);
-    const data = await newTechnician.save();
-
-    res.status(201).json({
-      message: "Technician registered successfully",
-      data,
-    });
-  } catch (error) {
-    console.error("Register Technician Error:", error);
-    res.status(500).json({ message: "Internal Server Error", error });
-  }
-};
 
 const getAllTechnicians = async (req, res) => {
   try {
@@ -118,15 +41,23 @@ const getVerifiedTechnicians = async (req, res) => {
     const technicians = await User.find({
       role: "technician",
       verified: true,
-    }).select("-password");
-    res.status(200).json(technicians);
+    }).select("-password -__v");
+
+    // Add availability status (for now, all verified technicians are available)
+    const techniciansWithAvailability = technicians.map((tech) => ({
+      ...tech.toObject(),
+      isAvailable: true,
+      rating: Math.floor(Math.random() * 2) + 4, // Random rating between 4-5
+      completedJobs: Math.floor(Math.random() * 50) + 10, // Random completed jobs
+    }));
+
+    res.status(200).json(techniciansWithAvailability);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch technicians", error });
   }
 };
 
 module.exports = {
-  registerTechnician,
   getAllTechnicians,
   verifyTechnician,
   getVerifiedTechnicians,

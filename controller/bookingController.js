@@ -125,193 +125,278 @@ const notifyNextTechnician = async (req, res) => {
   }
 };
 
-const createBooking = async (req, res) => {
+// Direct booking from home page
+const createDirectBooking = async (req, res) => {
   try {
     const {
-      serviceType,
-      problemType,
-      customProblem,
-      estimatedCost,
+      technicianId,
+      scheduledDate,
+      scheduledTime,
       address,
-      preferredDate,
-      preferredTime,
-      latitude,
-      longitude, // from frontend if available
+      description,
+      serviceType,
     } = req.body;
 
-    const customerId = req.user.id;
+    // Validate required fields
+    if (!technicianId || !scheduledDate || !scheduledTime || !address) {
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
+    }
 
-    // Step 1: Find nearest verified technician matching serviceType
-    const nearbyTechnician = await User.findOne({
-      role: "technician",
-      verified: true,
-      skills: serviceType, // checks if serviceType is in skills[]
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
-          $maxDistance: 10000, // 10 km range, adjust as needed
-        },
-      },
-    });
+    // Check if technician exists and is verified
+    const technician = await User.findById(technicianId);
+    if (!technician || technician.role !== "technician") {
+      return res.status(404).json({
+        message: "Technician not found",
+      });
+    }
 
+    if (!technician.verified) {
+      return res.status(400).json({
+        message: "Technician is not verified",
+      });
+    }
+
+    // Create new booking
     const booking = new Booking({
-      customer: customerId,
-      technician: nearbyTechnician?._id || null,
-      serviceType,
-      problemType,
-      customProblem: problemType === "Other" ? customProblem : null,
-      estimatedCost,
+      customer: req.user.id,
+      technician: technicianId,
+      serviceType: serviceType || technician.skills[0] || "plumbing",
+      problemType: description || "General Service",
+      customProblem: description,
+      estimatedCost: 0, // Default cost, can be updated later
       address,
-      preferredDate,
-      preferredTime,
+      preferredDate: scheduledDate,
+      preferredTime: scheduledTime,
       status: "pending",
+      paymentStatus: "pending",
     });
 
-    const savedBooking = await booking.save();
+    await booking.save();
+
+    // Add booking to customer's history
+    const customer = await User.findById(req.user.id);
+    if (customer) {
+      customer.history.push(booking._id);
+      await customer.save();
+    }
+
+    // Send notification to technician via socket.io
+    const io = req.app.get("io");
+    if (io) {
+      io.to(technicianId.toString()).emit("new_booking", {
+        type: "new_booking",
+        booking: {
+          id: booking._id,
+          customer: {
+            id: req.user.id,
+            fullName: req.user.fullName,
+            email: req.user.email,
+          },
+          serviceType: booking.serviceType,
+          scheduledDate: booking.scheduledDate,
+          scheduledTime: booking.scheduledTime,
+          address: booking.address,
+          description: booking.description,
+        },
+        message: "You have a new booking request!",
+      });
+    }
+
+    console.log(
+      `New booking notification sent to technician: ${technician.email}`
+    );
 
     res.status(201).json({
-      message: nearbyTechnician
-        ? "Booking submitted and assigned to a technician"
-        : "Booking submitted (technician will be assigned soon)",
-      data: savedBooking,
+      message: "Booking created successfully",
+      booking: {
+        id: booking._id,
+        customer: {
+          id: req.user.id,
+          fullName: req.user.fullName,
+          email: req.user.email,
+        },
+        technician: {
+          id: technician._id,
+          fullName: technician.fullName,
+          email: technician.email,
+        },
+        serviceType: booking.serviceType,
+        status: booking.status,
+        estimatedCost: booking.estimatedCost,
+        address: booking.address,
+        createdAt: booking.createdAt,
+      },
     });
   } catch (error) {
-    console.error("Booking error:", error);
-    res.status(500).json({ message: "Server error", error });
+    console.error("Create booking error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("customer", "fullName email phone")
+      .populate("technician", "fullName email phone companyName")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      bookings,
+      total: bookings.length,
+    });
+  } catch (error) {
+    console.error("Get bookings error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const getCustomerBookings = async (req, res) => {
   try {
-    const customerId = req.user.id;
+    const { customerId } = req.params;
 
     const bookings = await Booking.find({ customer: customerId })
-      .populate("technician", "fullName email phone")
+      .populate("technician", "fullName email phone companyName")
       .sort({ createdAt: -1 });
 
-    res.status(200).json(bookings);
+    res.json({
+      bookings,
+      total: bookings.length,
+    });
   } catch (error) {
-    console.error("Fetch customer bookings error:", error);
-    res.status(500).json({ message: "Server error", error });
+    console.error("Get customer bookings error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const getTechnicianBookings = async (req, res) => {
   try {
-    const technicianId = req.user.id;
+    const { technicianId } = req.params;
 
     const bookings = await Booking.find({ technician: technicianId })
       .populate("customer", "fullName email phone")
       .sort({ createdAt: -1 });
 
-    res.status(200).json(bookings);
+    res.json({
+      bookings,
+      total: bookings.length,
+    });
   } catch (error) {
-    console.error("Fetch technician bookings error:", error);
-    res.status(500).json({ message: "Server error", error });
+    console.error("Get technician bookings error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const updateBookingStatus = async (req, res) => {
   try {
-    const technicianId = req.user.id;
-    const { id } = req.params;
+    const { bookingId } = req.params;
     const { status } = req.body;
 
-    // Only these values are allowed
-    const validStatuses = ["accepted", "rejected", "completed"];
+    const validStatuses = ["pending", "accepted", "rejected", "completed"];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid status value" });
+      return res.status(400).json({
+        message: "Invalid status",
+      });
     }
 
-    // Find the booking
-    const booking = await Booking.findById(id);
+    const booking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status },
+      { new: true }
+    ).populate("customer technician");
+
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({
+        message: "Booking not found",
+      });
     }
 
-    // Technician can only update their own bookings
-    if (booking.technician?.toString() !== technicianId) {
-      return res.status(403).json({ message: "Unauthorized access" });
-    }
-
-    booking.status = status;
-    if (status === "completed") {
-      booking.paymentStatus = "paid";
-    }
-    await booking.save();
-
-    res.status(200).json({
-      message: `Booking ${status} successfully`,
+    res.json({
+      message: "Booking status updated successfully",
       booking,
     });
   } catch (error) {
     console.error("Update booking status error:", error);
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Get booking by ID (with customer and technician details)
 const getBookingById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const booking = await Booking.findById(id)
-      .populate("customer", "fullName email phone address")
-      .populate("technician", "fullName email phone address");
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId)
+      .populate("customer", "fullName email phone")
+      .populate("technician", "fullName email phone companyName skills");
+
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({
+        message: "Booking not found",
+      });
     }
-    res.status(200).json(booking);
+
+    res.json({ booking });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Get booking error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Get technician income and payouts
-const getTechnicianIncome = async (req, res) => {
+const deleteBooking = async (req, res) => {
   try {
-    const technicianId = req.user.id;
-    // Find all completed bookings for this technician
-    const completedBookings = await Booking.find({
-      technician: technicianId,
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findByIdAndDelete(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+    }
+
+    res.json({
+      message: "Booking deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete booking error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const getBookingStats = async (req, res) => {
+  try {
+    const totalBookings = await Booking.countDocuments();
+    const pendingBookings = await Booking.countDocuments({ status: "pending" });
+    const completedBookings = await Booking.countDocuments({
       status: "completed",
     });
-    // Total earnings
-    const totalEarnings = completedBookings.reduce(
-      (sum, b) => sum + (b.estimatedCost || 0),
-      0
-    );
-    // Monthly earnings (current month)
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const monthlyEarnings = completedBookings
-      .filter((b) => {
-        const d = new Date(b.updatedAt || b.createdAt);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      })
-      .reduce((sum, b) => sum + (b.estimatedCost || 0), 0);
-    // Payouts (list of completed bookings)
-    const payouts = completedBookings.map((b) => ({
-      id: b._id,
-      date: b.updatedAt || b.createdAt,
-      amount: b.estimatedCost || 0,
-    }));
-    res.status(200).json({ totalEarnings, monthlyEarnings, payouts });
+    const totalRevenue = await Booking.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$estimatedCost" } } },
+    ]);
+
+    res.json({
+      totalBookings,
+      pendingBookings,
+      completedBookings,
+      totalRevenue: totalRevenue[0]?.total || 0,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Get booking stats error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 module.exports = {
   searchTechnician,
-  createBooking,
+  createDirectBooking,
+  getAllBookings,
   getCustomerBookings,
   getTechnicianBookings,
   updateBookingStatus,
   notifyNextTechnician,
   getBookingById,
-  getTechnicianIncome,
+  deleteBooking,
+  getBookingStats,
 };
