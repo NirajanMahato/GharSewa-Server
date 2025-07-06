@@ -24,7 +24,6 @@ const io = new Server(server, {
 connectDB();
 const PORT = process.env.PORT || 5000;
 
-// Make socket.io available to controllers
 app.set("io", io);
 
 app.use(cors());

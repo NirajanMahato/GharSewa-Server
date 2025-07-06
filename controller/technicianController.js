@@ -15,7 +15,6 @@ const verifyTechnician = async (req, res) => {
   try {
     const technicianId = req.params.technicianId;
 
-    // Check if current user is admin
     if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Access denied. Admins only." });
     }
@@ -43,11 +42,9 @@ const getVerifiedTechnicians = async (req, res) => {
       verified: true,
     }).select("-password -__v");
 
-    // Add availability status (for now, all verified technicians are available)
     const techniciansWithAvailability = technicians.map((tech) => ({
       ...tech.toObject(),
       isAvailable: true,
-      rating: Math.floor(Math.random() * 2) + 4, // Random rating between 4-5
       completedJobs: Math.floor(Math.random() * 50) + 10, // Random completed jobs
     }));
 

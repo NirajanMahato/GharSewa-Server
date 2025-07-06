@@ -15,9 +15,9 @@ const adminOnly = require("../middleware/adminOnly");
 
 // Public routes (for customers)
 router.post("/", verifyToken, createDirectBooking);
-router.get("/customer/:customerId", getCustomerBookings);
-router.get("/technician/:technicianId", getTechnicianBookings);
-router.get("/:bookingId", getBookingById);
+router.get("/customer/:customerId", verifyToken, getCustomerBookings);
+router.get("/technician/:technicianId", verifyToken, getTechnicianBookings);
+router.get("/:bookingId", verifyToken, getBookingById);
 
 // Protected routes
 router.put("/:bookingId/status", verifyToken, updateBookingStatus);

@@ -18,20 +18,17 @@ const registerCustomer = async (req, res) => {
   try {
     const { fullName, email, phone, password } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
     if (existingUser) {
       return res.status(400).json({ message: "Email or Phone already exists" });
     }
 
-    //check password's length
     if (password.length < 6) {
       return res
         .status(400)
         .json({ message: "Password must be at least 6 characters long" });
     }
 
-    //Hash the password
     const hashedPass = await bcrypt.hash(password, 10);
 
     const userData = {
@@ -41,7 +38,7 @@ const registerCustomer = async (req, res) => {
       password: hashedPass,
       location: {
         type: "Point",
-        coordinates: [0, 0], // <-- Dummy default or actual coordinates
+        coordinates: [0, 0],
       },
     };
 
@@ -96,7 +93,7 @@ const login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "3d" }
       );
-      
+
       return res.status(200).json({
         message: "Login successful",
         user: {
@@ -128,7 +125,7 @@ const saveUserLocation = async (req, res) => {
       {
         location: {
           type: "Point",
-          coordinates: [longitude, latitude], // GeoJSON format: [lng, lat]
+          coordinates: [longitude, latitude],
         },
       },
       { new: true }
@@ -155,10 +152,114 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "New password must be at least 6 characters long",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({ message: "Failed to change password", error });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const { fullName, email, phone, address } = req.body;
+    const userId = req.user.id;
+
+    if (!fullName || !email || !phone) {
+      return res.status(400).json({ 
+        message: "Full name, email, and phone are required" 
+      });
+    }
+
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ 
+      email, 
+      _id: { $ne: userId } 
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email is already taken" });
+    }
+
+    // Check if phone is already taken by another user
+    const existingPhone = await User.findOne({ 
+      phone, 
+      _id: { $ne: userId } 
+    });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone number is already taken" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update user fields
+    user.fullName = fullName;
+    user.email = email;
+    user.phone = phone;
+    if (address) {
+      user.address = address;
+    }
+
+    await user.save();
+
+    // Return updated user without password
+    const updatedUser = await User.findById(userId).select("-password");
+
+    res.status(200).json({ 
+      message: "Profile updated successfully",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ message: "Failed to update profile", error });
+  }
+};
+
 module.exports = {
   getAllUsers,
   registerCustomer,
   login,
   saveUserLocation,
   getCurrentUser,
+  changePassword,
+  updateProfile,
 };

@@ -63,19 +63,16 @@ const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find admin user
     const admin = await User.findOne({ email, role: "admin" });
     if (!admin) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Check password
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: admin._id, role: admin.role },
       process.env.JWT_SECRET,
@@ -112,7 +109,6 @@ const addTechnician = async (req, res) => {
       experience,
     } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }],
     });
@@ -122,10 +118,8 @@ const addTechnician = async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new technician
     const technician = new User({
       fullName,
       email,
@@ -136,7 +130,7 @@ const addTechnician = async (req, res) => {
       address,
       skills: skills || [],
       experience: experience || 0,
-      verified: true, // Admin-created technicians are automatically verified
+      verified: true,
       termsAgreed: true,
     });
 
@@ -203,10 +197,9 @@ const updateTechnician = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Remove sensitive fields that shouldn't be updated directly
     delete updateData.password;
     delete updateData.role;
-    delete updateData.email; // Email should be updated through a separate process
+    delete updateData.email;
 
     const technician = await User.findByIdAndUpdate(
       id,
@@ -283,14 +276,15 @@ const getDashboardStats = async (req, res) => {
       verified: false,
     });
 
-    // Get booking statistics
     const Booking = require("../models/Booking");
     const totalBookings = await Booking.countDocuments();
     const pendingBookings = await Booking.countDocuments({ status: "pending" });
-    const completedBookings = await Booking.countDocuments({ status: "completed" });
+    const completedBookings = await Booking.countDocuments({
+      status: "completed",
+    });
     const totalRevenue = await Booking.aggregate([
       { $match: { status: "completed" } },
-      { $group: { _id: null, total: { $sum: "$estimatedCost" } } }
+      { $group: { _id: null, total: { $sum: "$estimatedCost" } } },
     ]);
 
     res.json({

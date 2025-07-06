@@ -1,7 +1,6 @@
 const Booking = require("../models/Booking");
 const Message = require("../models/Message");
 
-// Function to send notification to technician
 const notifyTechnician = (io, technicianId, bookingData) => {
   io.to(technicianId.toString()).emit("new_booking", {
     type: "new_booking",

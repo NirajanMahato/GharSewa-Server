@@ -39,7 +39,6 @@ const searchTechnician = async (req, res) => {
     }
 
     if (searchType === "rapid") {
-      // Rapid search: store up to 5 technicians, do not assign yet
       const notifiedTechnicians = technicians.map((t) => t._id);
       const newBooking = new Booking({
         customer: req.user.id,
@@ -54,14 +53,12 @@ const searchTechnician = async (req, res) => {
         createdAt: new Date(),
       });
       await newBooking.save();
-      // Socket.io notification will be handled in the socket handler
       return res.json({
         success: true,
         bookingId: newBooking._id,
         notifiedTechnicians,
       });
     } else {
-      // Normal search: assign one technician randomly
       const selected =
         technicians[Math.floor(Math.random() * technicians.length)];
       const newBooking = new Booking({
@@ -137,14 +134,12 @@ const createDirectBooking = async (req, res) => {
       serviceType,
     } = req.body;
 
-    // Validate required fields
     if (!technicianId || !scheduledDate || !scheduledTime || !address) {
       return res.status(400).json({
         message: "Missing required fields",
       });
     }
 
-    // Check if technician exists and is verified
     const technician = await User.findById(technicianId);
     if (!technician || technician.role !== "technician") {
       return res.status(404).json({
@@ -158,7 +153,6 @@ const createDirectBooking = async (req, res) => {
       });
     }
 
-    // Create new booking
     const booking = new Booking({
       customer: req.user.id,
       technician: technicianId,
@@ -175,14 +169,12 @@ const createDirectBooking = async (req, res) => {
 
     await booking.save();
 
-    // Add booking to customer's history
     const customer = await User.findById(req.user.id);
     if (customer) {
       customer.history.push(booking._id);
       await customer.save();
     }
 
-    // Send notification to technician via socket.io
     const io = req.app.get("io");
     if (io) {
       io.to(technicianId.toString()).emit("new_booking", {
