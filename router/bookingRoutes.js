@@ -6,6 +6,7 @@ const {
   getCustomerBookings,
   getTechnicianBookings,
   updateBookingStatus,
+  updateBookingCost,
   getBookingById,
   deleteBooking,
   getBookingStats,
@@ -15,16 +16,21 @@ const adminOnly = require("../middleware/adminOnly");
 
 // Public routes (for customers)
 router.post("/", verifyToken, createDirectBooking);
-router.get("/customer/:customerId", verifyToken, getCustomerBookings);
-router.get("/technician/:technicianId", verifyToken, getTechnicianBookings);
-router.get("/:bookingId", verifyToken, getBookingById);
-
-// Protected routes
-router.put("/:bookingId/status", verifyToken, updateBookingStatus);
 
 // Admin routes
-router.get("/admin/all", verifyToken, adminOnly, getAllBookings);
-router.delete("/admin/:bookingId", verifyToken, adminOnly, deleteBooking);
-router.get("/admin/stats", verifyToken, adminOnly, getBookingStats);
+router.get("/", verifyToken, adminOnly, getAllBookings);
+router.get("/stats", verifyToken, adminOnly, getBookingStats);
+router.delete("/:bookingId", verifyToken, adminOnly, deleteBooking);
+
+// Customer routes
+router.get("/customer/:customerId", verifyToken, getCustomerBookings);
+
+// Technician routes
+router.get("/technician/:technicianId", verifyToken, getTechnicianBookings);
+
+// Booking management routes
+router.get("/:bookingId", verifyToken, getBookingById);
+router.put("/:bookingId/status", verifyToken, updateBookingStatus);
+router.put("/:bookingId/cost", verifyToken, updateBookingCost);
 
 module.exports = router;

@@ -380,6 +380,39 @@ const getBookingStats = async (req, res) => {
   }
 };
 
+const updateBookingCost = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { estimatedCost } = req.body;
+
+    if (!estimatedCost || estimatedCost <= 0) {
+      return res.status(400).json({
+        message: "Invalid cost amount",
+      });
+    }
+
+    const booking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { estimatedCost },
+      { new: true }
+    ).populate("customer technician");
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+    }
+
+    res.json({
+      message: "Booking cost updated successfully",
+      booking,
+    });
+  } catch (error) {
+    console.error("Update booking cost error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   searchTechnician,
   createDirectBooking,
@@ -387,6 +420,7 @@ module.exports = {
   getCustomerBookings,
   getTechnicianBookings,
   updateBookingStatus,
+  updateBookingCost,
   notifyNextTechnician,
   getBookingById,
   deleteBooking,
